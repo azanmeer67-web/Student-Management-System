@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../config/db");
+
+// ✅ FIXED PATH (IMPORTANT)
+const db = require("../db");
 
 
 // =====================
@@ -18,12 +20,11 @@ router.get("/", (req, res) => {
 
 
 // =====================
-// ADD STUDENT (POST)
+// ADD STUDENT
 // =====================
 router.post("/", (req, res) => {
   const { name, email, age, course } = req.body;
 
-  // 🔍 Check if email exists
   const checkSql = "SELECT * FROM students WHERE email = ?";
 
   db.query(checkSql, [email], (err, result) => {
@@ -36,8 +37,8 @@ router.post("/", (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // ✅ Insert if email not found
-    const insertSql = "INSERT INTO students (name, email, age, course) VALUES (?, ?, ?, ?)";
+    const insertSql =
+      "INSERT INTO students (name, email, age, course) VALUES (?, ?, ?, ?)";
 
     db.query(insertSql, [name, email, age, course], (err, result) => {
       if (err) {
@@ -47,7 +48,7 @@ router.post("/", (req, res) => {
 
       res.json({
         message: "Student added successfully",
-        id: result.insertId
+        id: result.insertId,
       });
     });
   });
@@ -55,14 +56,14 @@ router.post("/", (req, res) => {
 
 
 // =====================
-// UPDATE STUDENT (PUT)
+// UPDATE STUDENT
 // =====================
 router.put("/:id", (req, res) => {
   const id = req.params.id;
   const { name, email, age, course } = req.body;
 
-  // 🔍 Check if email exists for another student
-  const checkSql = "SELECT * FROM students WHERE email = ? AND id != ?";
+  const checkSql =
+    "SELECT * FROM students WHERE email = ? AND id != ?";
 
   db.query(checkSql, [email, id], (err, result) => {
     if (err) {
@@ -74,10 +75,10 @@ router.put("/:id", (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // ✅ Update if email is unique
-    const updateSql = "UPDATE students SET name=?, email=?, age=?, course=? WHERE id=?";
+    const updateSql =
+      "UPDATE students SET name=?, email=?, age=?, course=? WHERE id=?";
 
-    db.query(updateSql, [name, email, age, course, id], (err, result) => {
+    db.query(updateSql, [name, email, age, course, id], (err) => {
       if (err) {
         console.log(err);
         return res.status(500).json({ error: "Database error" });
@@ -95,7 +96,7 @@ router.put("/:id", (req, res) => {
 router.delete("/:id", (req, res) => {
   const id = req.params.id;
 
-  db.query("DELETE FROM students WHERE id=?", [id], (err, result) => {
+  db.query("DELETE FROM students WHERE id=?", [id], (err) => {
     if (err) {
       console.log(err);
       return res.status(500).json({ error: "Database error" });
