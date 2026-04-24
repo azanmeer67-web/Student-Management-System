@@ -1,109 +1,66 @@
 const express = require("express");
 const router = express.Router();
+const Student = require("../models/Student");
 
-// ✅ FIXED PATH (IMPORTANT)
-const db = require("../db.js");
-
-
-// =====================
-// GET ALL STUDENTS
-// =====================
-router.get("/", (req, res) => {
-  db.query("SELECT * FROM students", (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Database error" });
-    }
-    res.json(result);
-  });
+// GET ALL
+router.get("/", async (req, res) => {
+  try {
+    const students = await Student.find();
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
+// ADD
+router.post("/", async (req, res) => {
+  try {
+    const { email } = req.body;
 
-// =====================
-// ADD STUDENT
-// =====================
-router.post("/", (req, res) => {
-  const { name, email, age, course } = req.body;
-
-  const checkSql = "SELECT * FROM students WHERE email = ?";
-
-  db.query(checkSql, [email], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (result.length > 0) {
+    const exists = await Student.findOne({ email });
+    if (exists) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    const insertSql =
-      "INSERT INTO students (name, email, age, course) VALUES (?, ?, ?, ?)";
+    const student = new Student(req.body);
+    await student.save();
 
-    db.query(insertSql, [name, email, age, course], (err, result) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Database error" });
-      }
-
-      res.json({
-        message: "Student added successfully",
-        id: result.insertId,
-      });
-    });
-  });
+    res.json({ message: "Student added successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
+// UPDATE
+router.put("/:id", async (req, res) => {
+  try {
+    const { email } = req.body;
 
-// =====================
-// UPDATE STUDENT
-// =====================
-router.put("/:id", (req, res) => {
-  const id = req.params.id;
-  const { name, email, age, course } = req.body;
+    const exists = await Student.findOne({
+      email,
+      _id: { $ne: req.params.id }
+    });
 
-  const checkSql =
-    "SELECT * FROM students WHERE email = ? AND id != ?";
-
-  db.query(checkSql, [email, id], (err, result) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    if (result.length > 0) {
+    if (exists) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    const updateSql =
-      "UPDATE students SET name=?, email=?, age=?, course=? WHERE id=?";
+    await Student.findByIdAndUpdate(req.params.id, req.body);
 
-    db.query(updateSql, [name, email, age, course, id], (err) => {
-      if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Database error" });
-      }
-
-      res.json({ message: "Student updated successfully" });
-    });
-  });
+    res.json({ message: "Student updated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
-
-// =====================
-// DELETE STUDENT
-// =====================
-router.delete("/:id", (req, res) => {
-  const id = req.params.id;
-
-  db.query("DELETE FROM students WHERE id=?", [id], (err) => {
-    if (err) {
-      console.log(err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
+// DELETE
+router.delete("/:id", async (req, res) => {
+  try {
+    await Student.findByIdAndDelete(req.params.id);
     res.json({ message: "Student deleted successfully" });
-  });
+  } catch (err) {
+    res.status(500).json({ error: "Database error" });
+  }
 });
 
 module.exports = router;
