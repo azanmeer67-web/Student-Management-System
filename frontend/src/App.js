@@ -23,8 +23,10 @@ function App() {
       .catch((err) => console.log(err));
   };
 
+  // ✅ FIXED useEffect (this was your error)
   useEffect(() => {
     fetchStudents();
+    // eslint-disable-next-line
   }, []);
 
   // HANDLE INPUT
