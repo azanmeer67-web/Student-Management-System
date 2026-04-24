@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 function App() {
+  const API = process.env.REACT_APP_API_URL;
+
   const [students, setStudents] = useState([]);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
@@ -13,28 +15,31 @@ function App() {
     course: ""
   });
 
+  // FETCH STUDENTS
+  const fetchStudents = () => {
+    axios
+      .get(`${API}/api/students`)
+      .then((res) => setStudents(res.data))
+      .catch((err) => console.log(err));
+  };
+
   useEffect(() => {
     fetchStudents();
   }, []);
 
-  const fetchStudents = () => {
-    axios.get("http://localhost:5000/api/students")
-      .then(res => setStudents(res.data))
-      .catch(err => console.log(err));
-  };
-
+  // HANDLE INPUT
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // SUBMIT (ADD / UPDATE)
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // 🔴 FRONTEND DUPLICATE CHECK
     const emailExists = students.some(
       (s) =>
         s.email.toLowerCase() === formData.email.toLowerCase() &&
-        s.id !== editId
+        s._id !== editId
     );
 
     if (emailExists) {
@@ -45,7 +50,8 @@ function App() {
 
     // UPDATE
     if (editId) {
-      axios.put(`http://localhost:5000/api/students/${editId}`, formData)
+      axios
+        .put(`${API}/api/students/${editId}`, formData)
         .then(() => {
           fetchStudents();
           setEditId(null);
@@ -66,7 +72,8 @@ function App() {
 
     // ADD
     else {
-      axios.post("http://localhost:5000/api/students", formData)
+      axios
+        .post(`${API}/api/students`, formData)
         .then(() => {
           fetchStudents();
           setFormData({ name: "", email: "", age: "", course: "" });
@@ -85,14 +92,17 @@ function App() {
     }
   };
 
+  // DELETE
   const deleteStudent = (id) => {
     if (window.confirm("Are you sure?")) {
-      axios.delete(`http://localhost:5000/api/students/${id}`)
+      axios
+        .delete(`${API}/api/students/${id}`)
         .then(() => fetchStudents())
         .catch(() => alert("Delete failed"));
     }
   };
 
+  // EDIT
   const editStudent = (s) => {
     setFormData({
       name: s.name,
@@ -100,7 +110,7 @@ function App() {
       age: s.age,
       course: s.course
     });
-    setEditId(s.id);
+    setEditId(s._id);
   };
 
   return (
@@ -109,17 +119,47 @@ function App() {
 
       {error && <p style={styles.error}>{error}</p>}
 
+      {/* FORM */}
       <form onSubmit={handleSubmit} style={styles.form}>
-        <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
-        <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
-        <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
-        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
+        <input
+          name="name"
+          placeholder="Name"
+          value={formData.name}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
+        <input
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
+        <input
+          name="age"
+          placeholder="Age"
+          value={formData.age}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
+        <input
+          name="course"
+          placeholder="Course"
+          value={formData.course}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
 
         <button type="submit" style={styles.primaryBtn}>
           {editId ? "Update Student" : "Add Student"}
         </button>
       </form>
 
+      {/* TABLE */}
       <table style={styles.table}>
         <thead>
           <tr style={styles.tableHeader}>
@@ -133,14 +173,21 @@ function App() {
 
         <tbody>
           {students.map((s) => (
-            <tr key={s.id} style={styles.row}>
+            <tr key={s._id} style={styles.row}>
               <td>{s.name}</td>
               <td>{s.email}</td>
               <td>{s.age}</td>
               <td>{s.course}</td>
               <td>
-                <button onClick={() => editStudent(s)} style={styles.editBtn}>Edit</button>
-                <button onClick={() => deleteStudent(s.id)} style={styles.deleteBtn}>Delete</button>
+                <button onClick={() => editStudent(s)} style={styles.editBtn}>
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteStudent(s._id)}
+                  style={styles.deleteBtn}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
@@ -150,6 +197,7 @@ function App() {
   );
 }
 
+/* STYLES */
 const styles = {
   container: {
     minHeight: "100vh",
@@ -157,20 +205,17 @@ const styles = {
     padding: "40px 20px",
     fontFamily: "Segoe UI, sans-serif"
   },
-
   title: {
     textAlign: "center",
     marginBottom: "20px",
     color: "#2c3e50"
   },
-
   error: {
     color: "red",
     textAlign: "center",
     marginBottom: "15px",
     fontWeight: "bold"
   },
-
   form: {
     background: "#fff",
     padding: "20px",
@@ -181,7 +226,6 @@ const styles = {
     gap: "10px",
     flexWrap: "wrap"
   },
-
   input: {
     padding: "12px",
     borderRadius: "6px",
@@ -189,7 +233,6 @@ const styles = {
     flex: "1",
     minWidth: "160px"
   },
-
   primaryBtn: {
     padding: "12px 20px",
     background: "#007bff",
@@ -198,7 +241,6 @@ const styles = {
     borderRadius: "6px",
     cursor: "pointer"
   },
-
   table: {
     width: "100%",
     borderCollapse: "collapse",
@@ -207,17 +249,14 @@ const styles = {
     overflow: "hidden",
     boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
   },
-
   tableHeader: {
     background: "#007bff",
     color: "#fff"
   },
-
   row: {
     textAlign: "center",
     borderBottom: "1px solid #eee"
   },
-
   editBtn: {
     marginRight: "5px",
     padding: "6px 12px",
@@ -227,7 +266,6 @@ const styles = {
     borderRadius: "5px",
     cursor: "pointer"
   },
-
   deleteBtn: {
     padding: "6px 12px",
     background: "#dc3545",
