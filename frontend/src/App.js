@@ -16,20 +16,24 @@ function App() {
     course: ""
   });
 
-  const fetchStudents = () => {
-    axios.get(`${API}/api/students`)
-      .then((res) => setStudents(res.data))
-      .catch((err) => console.log(err));
-  };
-
+  // FETCH STUDENTS
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    const fetchStudents = () => {
+      axios
+        .get(`${API}/api/students`)
+        .then((res) => setStudents(res.data))
+        .catch((err) => console.log(err));
+    };
 
+    fetchStudents();
+  }, [API]);
+
+  // HANDLE INPUT
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // SUBMIT (ADD / UPDATE)
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -44,39 +48,64 @@ function App() {
       return;
     }
 
+    // UPDATE
     if (editId) {
-      axios.put(`${API}/api/students/${editId}`, formData)
+      axios
+        .put(`${API}/api/students/${editId}`, formData)
         .then(() => {
-          fetchStudents();
           setEditId(null);
           setFormData({ name: "", email: "", age: "", course: "" });
           setError("");
-        });
-    } else {
-      axios.post(`${API}/api/students`, formData)
+          refreshData();
+        })
+        .catch(() => setError("Update failed"));
+    }
+
+    // ADD
+    else {
+      axios
+        .post(`${API}/api/students`, formData)
         .then(() => {
-          fetchStudents();
           setFormData({ name: "", email: "", age: "", course: "" });
           setError("");
-        });
+          refreshData();
+        })
+        .catch(() => setError("Add failed"));
     }
   };
 
+  // REFRESH DATA
+  const refreshData = () => {
+    axios
+      .get(`${API}/api/students`)
+      .then((res) => setStudents(res.data))
+      .catch(() => console.log("Fetch failed"));
+  };
+
+  // DELETE
   const deleteStudent = (id) => {
     if (window.confirm("Delete this student?")) {
-      axios.delete(`${API}/api/students/${id}`)
-        .then(() => fetchStudents());
+      axios
+        .delete(`${API}/api/students/${id}`)
+        .then(() => refreshData())
+        .catch(() => setError("Delete failed"));
     }
   };
 
+  // EDIT
   const editStudent = (s) => {
-    setFormData(s);
+    setFormData({
+      name: s.name,
+      email: s.email,
+      age: s.age,
+      course: s.course
+    });
     setEditId(s._id);
   };
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
-
+      
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <h2>🎓 SMS</h2>
@@ -88,6 +117,13 @@ function App() {
       {/* MAIN */}
       <div style={styles.main}>
         <h1>Dashboard 👋</h1>
+
+        {/* ERROR MESSAGE */}
+        {error && (
+          <p style={{ color: "red", marginBottom: "10px" }}>
+            {error}
+          </p>
+        )}
 
         {/* CARDS */}
         <div style={styles.cards}>
@@ -102,10 +138,10 @@ function App() {
           animate={{ opacity: 1 }}
           style={styles.form}
         >
-          <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} />
-          <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} />
-          <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} />
-          <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} />
+          <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
+          <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
+          <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
+          <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
 
           <button style={styles.btn}>
             {editId ? "Update" : "Add"}
@@ -136,14 +172,17 @@ function App() {
                 <td>{s.age}</td>
                 <td>{s.course}</td>
                 <td>
-                  <button onClick={() => editStudent(s)} style={styles.edit}>Edit</button>
-                  <button onClick={() => deleteStudent(s._id)} style={styles.delete}>Delete</button>
+                  <button onClick={() => editStudent(s)} style={styles.edit}>
+                    Edit
+                  </button>
+                  <button onClick={() => deleteStudent(s._id)} style={styles.delete}>
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </motion.table>
-
       </div>
     </div>
   );
@@ -193,7 +232,8 @@ const styles = {
     color: "#fff",
     border: "none",
     padding: "10px 20px",
-    borderRadius: "6px"
+    borderRadius: "6px",
+    cursor: "pointer"
   },
   table: {
     width: "100%",
@@ -214,14 +254,16 @@ const styles = {
     border: "none",
     padding: "6px 10px",
     marginRight: "5px",
-    borderRadius: "5px"
+    borderRadius: "5px",
+    cursor: "pointer"
   },
   delete: {
     background: "#ef4444",
     color: "#fff",
     border: "none",
     padding: "6px 10px",
-    borderRadius: "5px"
+    borderRadius: "5px",
+    cursor: "pointer"
   }
 };
 
