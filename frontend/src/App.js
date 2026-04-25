@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
+import { Routes, Route, Link } from "react-router-dom";
 
 function App() {
   const API = process.env.REACT_APP_API_URL;
@@ -18,22 +19,22 @@ function App() {
 
   // FETCH STUDENTS
   useEffect(() => {
-    const fetchStudents = () => {
-      axios
-        .get(`${API}/api/students`)
-        .then((res) => setStudents(res.data))
-        .catch((err) => console.log(err));
-    };
-
-    fetchStudents();
+    refreshData();
   }, [API]);
+
+  const refreshData = () => {
+    axios
+      .get(`${API}/api/students`)
+      .then((res) => setStudents(res.data))
+      .catch(() => console.log("Fetch failed"));
+  };
 
   // HANDLE INPUT
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // SUBMIT (ADD / UPDATE)
+  // SUBMIT
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -48,141 +49,117 @@ function App() {
       return;
     }
 
-    // UPDATE
     if (editId) {
-      axios
-        .put(`${API}/api/students/${editId}`, formData)
-        .then(() => {
-          setEditId(null);
-          setFormData({ name: "", email: "", age: "", course: "" });
-          setError("");
-          refreshData();
-        })
-        .catch(() => setError("Update failed"));
-    }
-
-    // ADD
-    else {
-      axios
-        .post(`${API}/api/students`, formData)
-        .then(() => {
-          setFormData({ name: "", email: "", age: "", course: "" });
-          setError("");
-          refreshData();
-        })
-        .catch(() => setError("Add failed"));
+      axios.put(`${API}/api/students/${editId}`, formData).then(() => {
+        setEditId(null);
+        setFormData({ name: "", email: "", age: "", course: "" });
+        setError("");
+        refreshData();
+      });
+    } else {
+      axios.post(`${API}/api/students`, formData).then(() => {
+        setFormData({ name: "", email: "", age: "", course: "" });
+        setError("");
+        refreshData();
+      });
     }
   };
 
-  // REFRESH DATA
-  const refreshData = () => {
-    axios
-      .get(`${API}/api/students`)
-      .then((res) => setStudents(res.data))
-      .catch(() => console.log("Fetch failed"));
-  };
-
-  // DELETE
   const deleteStudent = (id) => {
     if (window.confirm("Delete this student?")) {
-      axios
-        .delete(`${API}/api/students/${id}`)
-        .then(() => refreshData())
-        .catch(() => setError("Delete failed"));
+      axios.delete(`${API}/api/students/${id}`).then(refreshData);
     }
   };
 
-  // EDIT
   const editStudent = (s) => {
-    setFormData({
-      name: s.name,
-      email: s.email,
-      age: s.age,
-      course: s.course
-    });
+    setFormData(s);
     setEditId(s._id);
   };
 
+  // ================= PAGES =================
+
+  const Dashboard = () => (
+    <>
+      <h1>Dashboard 👋</h1>
+      <div style={styles.cards}>
+        <div style={styles.card}>Students: {students.length}</div>
+        <div style={styles.card}>Courses: 4</div>
+      </div>
+    </>
+  );
+
+  const StudentsPage = () => (
+    <>
+      <h1>Students</h1>
+
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      <motion.form onSubmit={handleSubmit} style={styles.form}>
+        <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
+        <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
+        <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
+        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
+
+        <button style={styles.btn}>
+          {editId ? "Update" : "Add"}
+        </button>
+      </motion.form>
+
+      <table style={styles.table}>
+        <thead>
+          <tr style={styles.tableHeader}>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Age</th>
+            <th>Course</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {students.map((s) => (
+            <tr key={s._id}>
+              <td>{s.name}</td>
+              <td>{s.email}</td>
+              <td>{s.age}</td>
+              <td>{s.course}</td>
+              <td>
+                <button onClick={() => editStudent(s)} style={styles.edit}>Edit</button>
+                <button onClick={() => deleteStudent(s._id)} style={styles.delete}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+
+  const AddStudent = () => (
+    <>
+      <h1>Add Student</h1>
+      <p>Use Students page to add/edit students.</p>
+    </>
+  );
+
   return (
     <div style={{ display: "flex", height: "100vh" }}>
-      
+
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <h2>🎓 SMS</h2>
-        <p>Dashboard</p>
-        <p>Students</p>
-        <p>Add Student</p>
+
+        <Link to="/" style={styles.link}>Dashboard</Link>
+        <Link to="/students" style={styles.link}>Students</Link>
+        <Link to="/add" style={styles.link}>Add Student</Link>
       </div>
 
       {/* MAIN */}
       <div style={styles.main}>
-        <h1>Dashboard 👋</h1>
-
-        {/* ERROR MESSAGE */}
-        {error && (
-          <p style={{ color: "red", marginBottom: "10px" }}>
-            {error}
-          </p>
-        )}
-
-        {/* CARDS */}
-        <div style={styles.cards}>
-          <div style={styles.card}>Students: {students.length}</div>
-          <div style={styles.card}>Courses: 4</div>
-        </div>
-
-        {/* FORM */}
-        <motion.form
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={styles.form}
-        >
-          <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
-          <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
-          <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
-          <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
-
-          <button style={styles.btn}>
-            {editId ? "Update" : "Add"}
-          </button>
-        </motion.form>
-
-        {/* TABLE */}
-        <motion.table
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={styles.table}
-        >
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Age</th>
-              <th>Course</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {students.map((s) => (
-              <tr key={s._id} style={styles.row}>
-                <td>{s.name}</td>
-                <td>{s.email}</td>
-                <td>{s.age}</td>
-                <td>{s.course}</td>
-                <td>
-                  <button onClick={() => editStudent(s)} style={styles.edit}>
-                    Edit
-                  </button>
-                  <button onClick={() => deleteStudent(s._id)} style={styles.delete}>
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </motion.table>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/students" element={<StudentsPage />} />
+          <Route path="/add" element={<AddStudent />} />
+        </Routes>
       </div>
     </div>
   );
@@ -201,6 +178,12 @@ const styles = {
     padding: "30px",
     background: "#f5f7fb"
   },
+  link: {
+    display: "block",
+    color: "white",
+    textDecoration: "none",
+    margin: "10px 0"
+  },
   cards: {
     display: "flex",
     gap: "20px",
@@ -209,9 +192,7 @@ const styles = {
   card: {
     background: "#fff",
     padding: "20px",
-    borderRadius: "10px",
-    flex: 1,
-    boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+    borderRadius: "10px"
   },
   form: {
     background: "#fff",
@@ -219,8 +200,7 @@ const styles = {
     borderRadius: "10px",
     marginBottom: "20px",
     display: "flex",
-    gap: "10px",
-    flexWrap: "wrap"
+    gap: "10px"
   },
   input: {
     padding: "10px",
@@ -232,38 +212,24 @@ const styles = {
     color: "#fff",
     border: "none",
     padding: "10px 20px",
-    borderRadius: "6px",
-    cursor: "pointer"
+    borderRadius: "6px"
   },
   table: {
     width: "100%",
-    background: "#fff",
-    borderRadius: "10px"
+    background: "#fff"
   },
   tableHeader: {
     background: "#4f46e5",
     color: "#fff"
   },
-  row: {
-    textAlign: "center",
-    borderBottom: "1px solid #eee"
-  },
   edit: {
-    background: "#22c55e",
+    background: "green",
     color: "#fff",
-    border: "none",
-    padding: "6px 10px",
-    marginRight: "5px",
-    borderRadius: "5px",
-    cursor: "pointer"
+    marginRight: "5px"
   },
   delete: {
-    background: "#ef4444",
-    color: "#fff",
-    border: "none",
-    padding: "6px 10px",
-    borderRadius: "5px",
-    cursor: "pointer"
+    background: "red",
+    color: "#fff"
   }
 };
 
