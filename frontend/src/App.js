@@ -290,9 +290,10 @@ function App() {
       {/* MAIN */}
       <div style={styles.main}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/students" element={<StudentsPage />} />
-          <Route path="/add" element={<AddStudent />} />
+          {/* ✅ FIX: Calling the components as functions here */}
+          <Route path="/" element={Dashboard()} />
+          <Route path="/students" element={StudentsPage()} />
+          <Route path="/add" element={AddStudent()} />
         </Routes>
       </div>
     </div>
