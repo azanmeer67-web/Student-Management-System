@@ -17,11 +17,7 @@ function App() {
     course: ""
   });
 
-  // FETCH STUDENTS
-  useEffect(() => {
-    refreshData();
-  }, [API]);
-
+  // REFRESH DATA (same backend logic)
   const refreshData = () => {
     axios
       .get(`${API}/api/students`)
@@ -29,12 +25,21 @@ function App() {
       .catch(() => console.log("Fetch failed"));
   };
 
+  // FETCH STUDENTS
+  useEffect(() => {
+    refreshData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [API]);
+
   // HANDLE INPUT
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
-  // SUBMIT
+  // SUBMIT (same backend logic)
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -50,29 +55,52 @@ function App() {
     }
 
     if (editId) {
-      axios.put(`${API}/api/students/${editId}`, formData).then(() => {
-        setEditId(null);
-        setFormData({ name: "", email: "", age: "", course: "" });
-        setError("");
-        refreshData();
-      });
+      axios
+        .put(`${API}/api/students/${editId}`, formData)
+        .then(() => {
+          setEditId(null);
+          setFormData({
+            name: "",
+            email: "",
+            age: "",
+            course: ""
+          });
+          setError("");
+          refreshData();
+        });
     } else {
-      axios.post(`${API}/api/students`, formData).then(() => {
-        setFormData({ name: "", email: "", age: "", course: "" });
-        setError("");
-        refreshData();
-      });
+      axios
+        .post(`${API}/api/students`, formData)
+        .then(() => {
+          setFormData({
+            name: "",
+            email: "",
+            age: "",
+            course: ""
+          });
+          setError("");
+          refreshData();
+        });
     }
   };
 
+  // DELETE (same backend logic)
   const deleteStudent = (id) => {
     if (window.confirm("Delete this student?")) {
-      axios.delete(`${API}/api/students/${id}`).then(refreshData);
+      axios
+        .delete(`${API}/api/students/${id}`)
+        .then(() => refreshData());
     }
   };
 
+  // EDIT
   const editStudent = (s) => {
-    setFormData(s);
+    setFormData({
+      name: s.name,
+      email: s.email,
+      age: s.age,
+      course: s.course
+    });
     setEditId(s._id);
   };
 
@@ -81,9 +109,15 @@ function App() {
   const Dashboard = () => (
     <>
       <h1>Dashboard 👋</h1>
+
       <div style={styles.cards}>
-        <div style={styles.card}>Students: {students.length}</div>
-        <div style={styles.card}>Courses: 4</div>
+        <div style={styles.card}>
+          Students: {students.length}
+        </div>
+
+        <div style={styles.card}>
+          Courses: 4
+        </div>
       </div>
     </>
   );
@@ -92,13 +126,51 @@ function App() {
     <>
       <h1>Students</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && (
+        <p style={{ color: "red" }}>
+          {error}
+        </p>
+      )}
 
-      <motion.form onSubmit={handleSubmit} style={styles.form}>
-        <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
-        <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
-        <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
-        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
+      <motion.form
+        onSubmit={handleSubmit}
+        style={styles.form}
+      >
+        <input
+          name="name"
+          placeholder="Name"
+          value={formData.name}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
+
+        <input
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
+
+        <input
+          name="age"
+          placeholder="Age"
+          value={formData.age}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
+
+        <input
+          name="course"
+          placeholder="Course"
+          value={formData.course}
+          onChange={handleChange}
+          style={styles.input}
+          required
+        />
 
         <button style={styles.btn}>
           {editId ? "Update" : "Add"}
@@ -124,8 +196,19 @@ function App() {
               <td>{s.age}</td>
               <td>{s.course}</td>
               <td>
-                <button onClick={() => editStudent(s)} style={styles.edit}>Edit</button>
-                <button onClick={() => deleteStudent(s._id)} style={styles.delete}>Delete</button>
+                <button
+                  onClick={() => editStudent(s)}
+                  style={styles.edit}
+                >
+                  Edit
+                </button>
+
+                <button
+                  onClick={() => deleteStudent(s._id)}
+                  style={styles.delete}
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           ))}
@@ -143,22 +226,40 @@ function App() {
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
-
       {/* SIDEBAR */}
       <div style={styles.sidebar}>
         <h2>🎓 SMS</h2>
 
-        <Link to="/" style={styles.link}>Dashboard</Link>
-        <Link to="/students" style={styles.link}>Students</Link>
-        <Link to="/add" style={styles.link}>Add Student</Link>
+        <Link to="/" style={styles.link}>
+          Dashboard
+        </Link>
+
+        <Link to="/students" style={styles.link}>
+          Students
+        </Link>
+
+        <Link to="/add" style={styles.link}>
+          Add Student
+        </Link>
       </div>
 
       {/* MAIN */}
       <div style={styles.main}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/students" element={<StudentsPage />} />
-          <Route path="/add" element={<AddStudent />} />
+          <Route
+            path="/"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/students"
+            element={<StudentsPage />}
+          />
+
+          <Route
+            path="/add"
+            element={<AddStudent />}
+          />
         </Routes>
       </div>
     </div>
@@ -173,27 +274,32 @@ const styles = {
     color: "white",
     padding: "20px"
   },
+
   main: {
     flex: 1,
     padding: "30px",
     background: "#f5f7fb"
   },
+
   link: {
     display: "block",
     color: "white",
     textDecoration: "none",
     margin: "10px 0"
   },
+
   cards: {
     display: "flex",
     gap: "20px",
     margin: "20px 0"
   },
+
   card: {
     background: "#fff",
     padding: "20px",
     borderRadius: "10px"
   },
+
   form: {
     background: "#fff",
     padding: "20px",
@@ -202,11 +308,13 @@ const styles = {
     display: "flex",
     gap: "10px"
   },
+
   input: {
     padding: "10px",
     borderRadius: "6px",
     border: "1px solid #ddd"
   },
+
   btn: {
     background: "#4f46e5",
     color: "#fff",
@@ -214,19 +322,23 @@ const styles = {
     padding: "10px 20px",
     borderRadius: "6px"
   },
+
   table: {
     width: "100%",
     background: "#fff"
   },
+
   tableHeader: {
     background: "#4f46e5",
     color: "#fff"
   },
+
   edit: {
     background: "green",
     color: "#fff",
     marginRight: "5px"
   },
+
   delete: {
     background: "red",
     color: "#fff"
