@@ -6,6 +6,10 @@ import { Routes, Route, Link } from "react-router-dom";
 function App() {
   const API = process.env.REACT_APP_API_URL;
 
+  // ✅ RESPONSIVE & SIDEBAR STATES
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+
   const [students, setStudents] = useState([]);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
@@ -17,7 +21,19 @@ function App() {
     course: ""
   });
 
-  // REFRESH DATA (same backend logic)
+  // ✅ LISTEN FOR WINDOW RESIZING
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Auto-hide menu on mobile, auto-open on desktop
+      setSidebarOpen(!mobile);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // REFRESH DATA
   const refreshData = () => {
     axios
       .get(`${API}/api/students`)
@@ -39,7 +55,7 @@ function App() {
     });
   };
 
-  // SUBMIT (same backend logic)
+  // SUBMIT
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -59,12 +75,7 @@ function App() {
         .put(`${API}/api/students/${editId}`, formData)
         .then(() => {
           setEditId(null);
-          setFormData({
-            name: "",
-            email: "",
-            age: "",
-            course: ""
-          });
+          setFormData({ name: "", email: "", age: "", course: "" });
           setError("");
           refreshData();
         });
@@ -72,19 +83,14 @@ function App() {
       axios
         .post(`${API}/api/students`, formData)
         .then(() => {
-          setFormData({
-            name: "",
-            email: "",
-            age: "",
-            course: ""
-          });
+          setFormData({ name: "", email: "", age: "", course: "" });
           setError("");
           refreshData();
         });
     }
   };
 
-  // DELETE (same backend logic)
+  // DELETE
   const deleteStudent = (id) => {
     if (window.confirm("Delete this student?")) {
       axios
@@ -104,16 +110,18 @@ function App() {
     setEditId(s._id);
   };
 
-  // Calculate Average Age for Dashboard
+  // Calculate Average Age
   const averageAge = students.length > 0
     ? Math.round(students.reduce((sum, s) => sum + Number(s.age || 0), 0) / students.length)
     : 0;
+
+  // Generate dynamic styles based on screen size
+  const styles = getStyles(isMobile);
 
   // ================= PAGES =================
 
   const Dashboard = () => (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      {/* Welcome Section */}
       <div style={styles.welcomeBox}>
         <h1 style={{ margin: 0, color: "#1e293b" }}>Dashboard 👋</h1>
         <p style={{ marginTop: "10px", color: "#64748b" }}>
@@ -121,62 +129,58 @@ function App() {
         </p>
       </div>
 
-      {/* Stats Cards */}
       <div style={styles.cards}>
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>Total Students</h3>
           <p style={styles.cardNumber}>{students.length}</p>
         </div>
-
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>Total Courses</h3>
           <p style={styles.cardNumber}>4</p>
         </div>
-
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>Average Age</h3>
           <p style={styles.cardNumber}>{averageAge}</p>
         </div>
-
         <div style={styles.card}>
           <h3 style={styles.cardTitle}>New Students</h3>
           <p style={styles.cardNumber}>Today</p>
         </div>
       </div>
 
-      {/* Recent Students Table */}
       <div style={styles.recentBox}>
         <h2 style={{ marginTop: 0, marginBottom: "20px", color: "#1e293b" }}>Recent Students</h2>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.th}>Name</th>
-              <th style={styles.th}>Email</th>
-              <th style={styles.th}>Age</th>
-              <th style={styles.th}>Course</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* Show only the 5 most recently added students */}
-            {[...students].reverse().slice(0, 5).map((s) => (
-              <tr key={s._id} style={styles.tr}>
-                <td style={styles.td}>{s.name}</td>
-                <td style={styles.td}>{s.email}</td>
-                <td style={styles.td}>{s.age}</td>
-                <td style={styles.td}>
-                  <span style={styles.badge}>{s.course}</span>
-                </td>
+        <div style={styles.tableWrapper}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.th}>Name</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Age</th>
+                <th style={styles.th}>Course</th>
               </tr>
-            ))}
-            {students.length === 0 && (
-              <tr>
-                <td colSpan="4" style={{ textAlign: "center", padding: "20px", color: "#64748b" }}>
-                  No students found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {[...students].reverse().slice(0, 5).map((s) => (
+                <tr key={s._id} style={styles.tr}>
+                  <td style={styles.td}>{s.name}</td>
+                  <td style={styles.td}>{s.email}</td>
+                  <td style={styles.td}>{s.age}</td>
+                  <td style={styles.td}>
+                    <span style={styles.badge}>{s.course}</span>
+                  </td>
+                </tr>
+              ))}
+              {students.length === 0 && (
+                <tr>
+                  <td colSpan="4" style={{ textAlign: "center", padding: "20px", color: "#64748b" }}>
+                    No students found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </motion.div>
   );
@@ -192,73 +196,43 @@ function App() {
       )}
 
       <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          name="name"
-          placeholder="Name"
-          value={formData.name}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        <input
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        <input
-          name="age"
-          placeholder="Age"
-          value={formData.age}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        <input
-          name="course"
-          placeholder="Course"
-          value={formData.course}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        <button style={styles.btn}>
-          {editId ? "Update" : "Add"}
-        </button>
+        <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
+        <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
+        <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
+        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
+        <button style={styles.btn}>{editId ? "Update" : "Add"}</button>
       </form>
 
       <div style={styles.recentBox}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.th}>Name</th>
-              <th style={styles.th}>Email</th>
-              <th style={styles.th}>Age</th>
-              <th style={styles.th}>Course</th>
-              <th style={styles.th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s._id} style={styles.tr}>
-                <td style={styles.td}>{s.name}</td>
-                <td style={styles.td}>{s.email}</td>
-                <td style={styles.td}>{s.age}</td>
-                <td style={styles.td}>{s.course}</td>
-                <td style={styles.td}>
-                  <button onClick={() => editStudent(s)} style={styles.edit}>
-                    Edit
-                  </button>
-                  <button onClick={() => deleteStudent(s._id)} style={styles.delete}>
-                    Delete
-                  </button>
-                </td>
+        <div style={styles.tableWrapper}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.th}>Name</th>
+                <th style={styles.th}>Email</th>
+                <th style={styles.th}>Age</th>
+                <th style={styles.th}>Course</th>
+                <th style={styles.th}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {students.map((s) => (
+                <tr key={s._id} style={styles.tr}>
+                  <td style={styles.td}>{s.name}</td>
+                  <td style={styles.td}>{s.email}</td>
+                  <td style={styles.td}>{s.age}</td>
+                  <td style={styles.td}>{s.course}</td>
+                  <td style={styles.td}>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button onClick={() => editStudent(s)} style={styles.edit}>Edit</button>
+                      <button onClick={() => deleteStudent(s._id)} style={styles.delete}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </motion.div>
   );
@@ -271,26 +245,33 @@ function App() {
   );
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* SIDEBAR */}
-      <div style={styles.sidebar}>
-        <h2 style={{ marginBottom: "30px", fontWeight: "bold" }}>🎓 SMS</h2>
+    <div style={styles.appContainer}>
+      
+      {/* SIDEBAR (Only renders if sidebarOpen is true) */}
+      {sidebarOpen && (
+        <div style={styles.sidebar}>
+          <h2 style={styles.logo}>🎓 SMS</h2>
+          <div style={styles.navMenu}>
+            <Link to="/" style={styles.link}>Dashboard</Link>
+            <Link to="/students" style={styles.link}>Students</Link>
+            <Link to="/add" style={styles.link}>Add</Link>
+          </div>
+        </div>
+      )}
 
-        <Link to="/" style={styles.link}>
-          Dashboard
-        </Link>
-        <Link to="/students" style={styles.link}>
-          Students
-        </Link>
-        <Link to="/add" style={styles.link}>
-          Add Student
-        </Link>
-      </div>
-
-      {/* MAIN */}
+      {/* MAIN CONTENT */}
       <div style={styles.main}>
+        {/* MENU TOGGLE BUTTON */}
+        <div style={{ marginBottom: "20px" }}>
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)} 
+            style={styles.toggleMenuBtn}
+          >
+            {sidebarOpen ? "✖ Close Menu" : "☰ Open Menu"}
+          </button>
+        </div>
+
         <Routes>
-          {/* ✅ FIX: Calling the components as functions here */}
           <Route path="/" element={Dashboard()} />
           <Route path="/students" element={StudentsPage()} />
           <Route path="/add" element={AddStudent()} />
@@ -300,30 +281,69 @@ function App() {
   );
 }
 
-/* STYLES */
-const styles = {
+/* ✅ DYNAMIC STYLES FUNCTION */
+const getStyles = (isMobile) => ({
+  appContainer: {
+    display: "flex",
+    flexDirection: isMobile ? "column" : "row",
+    minHeight: "100vh",
+    width: "100%"
+  },
   sidebar: {
-    width: "240px",
+    width: isMobile ? "100%" : "240px",
     background: "linear-gradient(180deg, #4f46e5, #1e3a8a)",
     color: "white",
-    padding: "30px 20px"
+    padding: isMobile ? "15px" : "30px 20px",
+    display: "flex",
+    flexDirection: isMobile ? "column" : "column",
+    boxSizing: "border-box",
+    transition: "0.3s"
   },
-  main: {
-    flex: 1,
-    padding: "40px",
-    background: "#f4f6f9",
-    overflowY: "auto"
+  logo: {
+    margin: isMobile ? "0 0 15px 0" : "0 0 30px 0",
+    fontWeight: "bold",
+    textAlign: isMobile ? "center" : "left"
+  },
+  navMenu: {
+    display: "flex",
+    flexDirection: isMobile ? "row" : "column",
+    gap: "10px",
+    justifyContent: isMobile ? "center" : "flex-start",
+    flexWrap: "wrap"
   },
   link: {
     display: "block",
     color: "white",
     textDecoration: "none",
-    margin: "15px 0",
     padding: "10px 15px",
     borderRadius: "8px",
     background: "rgba(255, 255, 255, 0.1)",
     fontWeight: "500",
-    transition: "0.3s"
+    transition: "0.3s",
+    flex: isMobile ? "1" : "none",
+    textAlign: "center",
+    fontSize: isMobile ? "14px" : "16px",
+    minWidth: isMobile ? "80px" : "auto"
+  },
+  main: {
+    flex: 1,
+    padding: isMobile ? "20px 15px" : "40px",
+    background: "#f4f6f9",
+    overflowX: "hidden",
+    boxSizing: "border-box",
+    width: "100%"
+  },
+  toggleMenuBtn: {
+    background: "#fff",
+    color: "#4f46e5",
+    border: "1px solid #4f46e5",
+    padding: "10px 15px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "14px",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    transition: "0.2s"
   },
   welcomeBox: {
     background: "#fff",
@@ -334,15 +354,15 @@ const styles = {
   },
   cards: {
     display: "flex",
-    gap: "20px",
-    margin: "20px 0 30px 0",
+    gap: "15px",
+    marginBottom: "30px",
     flexWrap: "wrap"
   },
   card: {
-    flex: "1",
-    minWidth: "180px",
+    flex: isMobile ? "1 1 45%" : "1",
+    minWidth: "140px",
     background: "#fff",
-    padding: "25px 20px",
+    padding: "20px",
     borderRadius: "12px",
     boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
     textAlign: "center"
@@ -350,40 +370,45 @@ const styles = {
   cardTitle: {
     margin: 0,
     color: "#64748b",
-    fontSize: "15px",
+    fontSize: "14px",
     fontWeight: "500"
   },
   cardNumber: {
-    fontSize: "32px",
+    fontSize: isMobile ? "24px" : "32px",
     fontWeight: "bold",
-    marginTop: "10px",
+    marginTop: "8px",
     marginBottom: 0,
     color: "#4f46e5"
   },
   recentBox: {
     background: "#fff",
-    padding: "25px",
+    padding: isMobile ? "15px" : "25px",
     borderRadius: "12px",
     boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
-    overflowX: "auto"
+    width: "100%",
+    boxSizing: "border-box"
   },
   form: {
     background: "#fff",
-    padding: "25px",
+    padding: isMobile ? "15px" : "25px",
     borderRadius: "12px",
     marginBottom: "25px",
     display: "flex",
+    flexDirection: isMobile ? "column" : "row",
     gap: "15px",
     flexWrap: "wrap",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.03)"
+    boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
+    boxSizing: "border-box"
   },
   input: {
     padding: "12px",
     borderRadius: "8px",
     border: "1px solid #e2e8f0",
     flex: "1",
-    minWidth: "160px",
-    outline: "none"
+    width: "100%",
+    minWidth: isMobile ? "100%" : "160px",
+    outline: "none",
+    boxSizing: "border-box"
   },
   btn: {
     background: "#4f46e5",
@@ -392,12 +417,18 @@ const styles = {
     padding: "12px 24px",
     borderRadius: "8px",
     cursor: "pointer",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    width: isMobile ? "100%" : "auto"
+  },
+  tableWrapper: {
+    width: "100%",
+    overflowX: "auto"
   },
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    textAlign: "left"
+    textAlign: "left",
+    minWidth: "500px" 
   },
   tableHeader: {
     background: "#4f46e5",
@@ -405,30 +436,32 @@ const styles = {
   },
   th: {
     padding: "15px",
-    fontWeight: "500"
+    fontWeight: "500",
+    fontSize: "14px"
   },
   tr: {
     borderBottom: "1px solid #f1f5f9"
   },
   td: {
     padding: "15px",
-    color: "#334155"
+    color: "#334155",
+    fontSize: "14px"
   },
   badge: {
     background: "#f1f5f9",
     padding: "5px 10px",
     borderRadius: "20px",
-    fontSize: "13px",
+    fontSize: "12px",
     border: "1px solid #e2e8f0"
   },
   edit: {
     background: "#22c55e",
     color: "#fff",
-    marginRight: "8px",
     padding: "6px 12px",
     border: "none",
     borderRadius: "6px",
-    cursor: "pointer"
+    cursor: "pointer",
+    flex: 1
   },
   delete: {
     background: "#ef4444",
@@ -436,8 +469,9 @@ const styles = {
     padding: "6px 12px",
     border: "none",
     borderRadius: "6px",
-    cursor: "pointer"
+    cursor: "pointer",
+    flex: 1
   }
-};
+});
 
 export default App;
