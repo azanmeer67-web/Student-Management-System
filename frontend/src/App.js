@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 
 function App() {
   const API = process.env.REACT_APP_API_URL;
+  const location = useLocation();
 
   // ✅ RESPONSIVE & SIDEBAR STATES
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -13,6 +14,7 @@ function App() {
   const [students, setStudents] = useState([]);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -26,7 +28,6 @@ function App() {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto-hide menu on mobile, auto-open on desktop
       setSidebarOpen(!mobile);
     };
     window.addEventListener("resize", handleResize);
@@ -43,7 +44,7 @@ function App() {
 
   // FETCH STUDENTS
   useEffect(() => {
-    refreshData();
+    if (API) refreshData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API]);
 
@@ -92,7 +93,7 @@ function App() {
 
   // DELETE
   const deleteStudent = (id) => {
-    if (window.confirm("Delete this student?")) {
+    if (window.confirm("Delete this student permanently?")) {
       axios
         .delete(`${API}/api/students/${id}`)
         .then(() => refreshData());
@@ -108,48 +109,84 @@ function App() {
       course: s.course
     });
     setEditId(s._id);
+    // Smooth scroll to the top of the form for better mobile experience
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Filter Students based on search term
+  const filteredStudents = students.filter((s) =>
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (s.course && s.course.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   // Calculate Average Age
   const averageAge = students.length > 0
     ? Math.round(students.reduce((sum, s) => sum + Number(s.age || 0), 0) / students.length)
     : 0;
 
-  // Generate dynamic styles based on screen size
+  // Unique Courses count
+  const uniqueCourses = [...new Set(students.map((s) => s.course?.trim().toLowerCase()))].filter(Boolean).length;
+
   const styles = getStyles(isMobile);
 
   // ================= PAGES =================
 
   const Dashboard = () => (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
       <div style={styles.welcomeBox}>
-        <h1 style={{ margin: 0, color: "#1e293b" }}>Dashboard 👋</h1>
-        <p style={{ marginTop: "10px", color: "#64748b" }}>
-          Welcome Back! Manage your student records easily.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <h1 style={{ margin: 0, color: "#0f172a", fontSize: isMobile ? "24px" : "30px", fontWeight: "800", letterSpacing: "-0.025em" }}>
+              Welcome back, Admin 👋
+            </h1>
+            <p style={{ marginTop: "6px", marginBottom: 0, color: "#64748b", fontSize: "14px" }}>
+              Here is a quick overview of your institution's metrics and data.
+            </p>
+          </div>
+          <Link to="/students" style={styles.btnLink}>Manage Data</Link>
+        </div>
       </div>
 
       <div style={styles.cards}>
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Total Students</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <h3 style={styles.cardTitle}>Total Students</h3>
+            <span style={{ fontSize: "20px" }}>👥</span>
+          </div>
           <p style={styles.cardNumber}>{students.length}</p>
         </div>
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Total Courses</h3>
-          <p style={styles.cardNumber}>4</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <h3 style={styles.cardTitle}>Active Courses</h3>
+            <span style={{ fontSize: "20px" }}>📚</span>
+          </div>
+          <p style={styles.cardNumber}>{uniqueCourses || 0}</p>
         </div>
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>Average Age</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <h3 style={styles.cardTitle}>Average Age</h3>
+            <span style={{ fontSize: "20px" }}>⏳</span>
+          </div>
           <p style={styles.cardNumber}>{averageAge}</p>
         </div>
         <div style={styles.card}>
-          <h3 style={styles.cardTitle}>New Students</h3>
-          <p style={styles.cardNumber}>Today</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <h3 style={styles.cardTitle}>New Enrollment</h3>
+            <span style={{ fontSize: "20px" }}>✨</span>
+          </div>
+          <p style={styles.cardNumber}>Active</p>
         </div>
       </div>
 
       <div style={styles.recentBox}>
-        <h2 style={{ marginTop: 0, marginBottom: "20px", color: "#1e293b" }}>Recent Students</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+          <h2 style={{ margin: 0, color: "#0f172a", fontSize: "18px", fontWeight: "700" }}>Recent Registrations</h2>
+          <Link to="/students" style={{ color: "#4f46e5", textDecoration: "none", fontSize: "14px", fontWeight: "600" }}>
+            View all →
+          </Link>
+        </div>
+
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
@@ -163,7 +200,7 @@ function App() {
             <tbody>
               {[...students].reverse().slice(0, 5).map((s) => (
                 <tr key={s._id} style={styles.tr}>
-                  <td style={styles.td}>{s.name}</td>
+                  <td style={{ ...styles.td, fontWeight: "600", color: "#0f172a" }}>{s.name}</td>
                   <td style={styles.td}>{s.email}</td>
                   <td style={styles.td}>{s.age}</td>
                   <td style={styles.td}>
@@ -173,8 +210,8 @@ function App() {
               ))}
               {students.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ textAlign: "center", padding: "20px", color: "#64748b" }}>
-                    No students found.
+                  <td colSpan="4" style={{ textAlign: "center", padding: "40px", color: "#94a3b8", fontSize: "14px" }}>
+                    No students registered yet.
                   </td>
                 </tr>
               )}
@@ -186,24 +223,65 @@ function App() {
   );
 
   const StudentsPage = () => (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h1 style={{ color: "#1e293b", marginBottom: "20px" }}>Manage Students</h1>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div style={{ marginBottom: "25px" }}>
+        <h1 style={{ color: "#0f172a", margin: 0, fontSize: isMobile ? "24px" : "30px", fontWeight: "800", letterSpacing: "-0.025em" }}>
+          Student Registry
+        </h1>
+        <p style={{ marginTop: "6px", color: "#64748b", fontSize: "14px" }}>
+          Add, modify, or delete your institution's active student records.
+        </p>
+      </div>
 
       {error && (
-        <p style={{ color: "red", background: "#fee2e2", padding: "10px", borderRadius: "6px" }}>
-          {error}
-        </p>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.errorBox}>
+          ⚠️ {error}
+        </motion.p>
       )}
 
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input name="name" placeholder="Name" value={formData.name} onChange={handleChange} style={styles.input} required />
-        <input name="email" placeholder="Email" value={formData.email} onChange={handleChange} style={styles.input} required />
-        <input name="age" placeholder="Age" value={formData.age} onChange={handleChange} style={styles.input} required />
-        <input name="course" placeholder="Course" value={formData.course} onChange={handleChange} style={styles.input} required />
-        <button style={styles.btn}>{editId ? "Update" : "Add"}</button>
-      </form>
+      {/* SEARCH AND ADD FORM */}
+      <div style={styles.formSection}>
+        <h3 style={{ margin: "0 0 15px 0", color: "#0f172a", fontSize: "16px", fontWeight: "700" }}>
+          {editId ? "✏️ Edit Student Details" : "➕ Register New Student"}
+        </h3>
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <input name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} style={styles.input} required />
+          <input name="email" placeholder="Email Address" value={formData.email} onChange={handleChange} style={styles.input} required />
+          <input name="age" placeholder="Age" type="number" value={formData.age} onChange={handleChange} style={styles.input} required />
+          <input name="course" placeholder="Course / Degree" value={formData.course} onChange={handleChange} style={styles.input} required />
+          <div style={{ display: "flex", gap: "10px", width: isMobile ? "100%" : "auto" }}>
+            <button style={styles.btn}>{editId ? "Update" : "Register"}</button>
+            {editId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditId(null);
+                  setFormData({ name: "", email: "", age: "", course: "" });
+                  setError("");
+                }}
+                style={styles.cancelBtn}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
 
+      {/* TABLE DATA LIST CARD */}
       <div style={styles.recentBox}>
+        {/* Real-time search filter bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", background: "#f8fafc", padding: "10px 15px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          <span style={{ color: "#94a3b8" }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Filter students by name, email, or course..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ border: "none", background: "transparent", outline: "none", width: "100%", fontSize: "14px", color: "#334155" }}
+          />
+        </div>
+
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
@@ -212,24 +290,33 @@ function App() {
                 <th style={styles.th}>Email</th>
                 <th style={styles.th}>Age</th>
                 <th style={styles.th}>Course</th>
-                <th style={styles.th}>Actions</th>
+                <th style={{ ...styles.th, textAlign: "center" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {students.map((s) => (
+              {filteredStudents.map((s) => (
                 <tr key={s._id} style={styles.tr}>
-                  <td style={styles.td}>{s.name}</td>
+                  <td style={{ ...styles.td, fontWeight: "600", color: "#0f172a" }}>{s.name}</td>
                   <td style={styles.td}>{s.email}</td>
                   <td style={styles.td}>{s.age}</td>
-                  <td style={styles.td}>{s.course}</td>
                   <td style={styles.td}>
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <span style={styles.badge}>{s.course}</span>
+                  </td>
+                  <td style={styles.td}>
+                    <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
                       <button onClick={() => editStudent(s)} style={styles.edit}>Edit</button>
                       <button onClick={() => deleteStudent(s._id)} style={styles.delete}>Delete</button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {filteredStudents.length === 0 && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: "center", padding: "35px", color: "#94a3b8", fontSize: "14px" }}>
+                    No student records matching your query were found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -238,36 +325,48 @@ function App() {
   );
 
   const AddStudent = () => (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      <h1 style={{ color: "#1e293b" }}>Add Student</h1>
-      <p style={{ color: "#64748b" }}>Please use the <b>Students</b> page to add and edit student records.</p>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <div style={styles.welcomeBox}>
+        <h1 style={{ color: "#0f172a", margin: "0 0 10px 0", fontSize: "24px", fontWeight: "800" }}>Manage Enrollment</h1>
+        <p style={{ color: "#64748b", fontSize: "14px", margin: 0 }}>
+          Please head to the <b>Students</b> tab where you can add and modify student profiles directly in your registry.
+        </p>
+        <div style={{ marginTop: "20px" }}>
+          <Link to="/students" style={styles.btnLink}>Go to Registry</Link>
+        </div>
+      </div>
     </motion.div>
   );
 
   return (
     <div style={styles.appContainer}>
-      
-      {/* SIDEBAR (Only renders if sidebarOpen is true) */}
+      {/* MODERN SIDEBAR */}
       {sidebarOpen && (
         <div style={styles.sidebar}>
-          <h2 style={styles.logo}>🎓 SMS</h2>
+          <div style={styles.logoWrapper}>
+            <span style={{ fontSize: "24px" }}>🎓</span>
+            <h2 style={styles.logo}>Portal</h2>
+          </div>
           <div style={styles.navMenu}>
-            <Link to="/" style={styles.link}>Dashboard</Link>
-            <Link to="/students" style={styles.link}>Students</Link>
-            <Link to="/add" style={styles.link}>Add</Link>
+            <Link to="/" style={{ ...styles.link, background: location.pathname === "/" ? "rgba(255, 255, 255, 0.15)" : "transparent" }}>
+              📊 Dashboard
+            </Link>
+            <Link to="/students" style={{ ...styles.link, background: location.pathname === "/students" ? "rgba(255, 255, 255, 0.15)" : "transparent" }}>
+              👥 Students
+            </Link>
+            <Link to="/add" style={{ ...styles.link, background: location.pathname === "/add" ? "rgba(255, 255, 255, 0.15)" : "transparent" }}>
+              ✨ Add New
+            </Link>
           </div>
         </div>
       )}
 
-      {/* MAIN CONTENT */}
+      {/* MAIN LAYOUT SECTION */}
       <div style={styles.main}>
-        {/* MENU TOGGLE BUTTON */}
-        <div style={{ marginBottom: "20px" }}>
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)} 
-            style={styles.toggleMenuBtn}
-          >
-            {sidebarOpen ? "✖ Close Menu" : "☰ Open Menu"}
+        {/* SLICK HEADER ACTION */}
+        <div style={{ display: "flex", justifyContent: isMobile ? "flex-start" : "flex-start", marginBottom: "24px" }}>
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={styles.toggleMenuBtn}>
+            {sidebarOpen ? "✕ Minimize" : "☰ Sidebar Menu"}
           </button>
         </div>
 
@@ -281,33 +380,45 @@ function App() {
   );
 }
 
-/* ✅ DYNAMIC STYLES FUNCTION */
+/* ✅ ENHANCED VISUAL SYSTEM */
 const getStyles = (isMobile) => ({
   appContainer: {
     display: "flex",
     flexDirection: isMobile ? "column" : "row",
     minHeight: "100vh",
-    width: "100%"
+    width: "100%",
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    background: "#f8fafc"
   },
   sidebar: {
-    width: isMobile ? "100%" : "240px",
-    background: "linear-gradient(180deg, #4f46e5, #1e3a8a)",
+    width: isMobile ? "100%" : "260px",
+    background: "linear-gradient(135deg, #1e1b4b, #312e81)",
     color: "white",
-    padding: isMobile ? "15px" : "30px 20px",
+    padding: isMobile ? "16px" : "32px 20px",
     display: "flex",
-    flexDirection: isMobile ? "column" : "column",
+    flexDirection: "column",
     boxSizing: "border-box",
-    transition: "0.3s"
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+  },
+  logoWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: isMobile ? "16px" : "36px",
+    justifyContent: isMobile ? "center" : "flex-start"
   },
   logo: {
-    margin: isMobile ? "0 0 15px 0" : "0 0 30px 0",
-    fontWeight: "bold",
-    textAlign: isMobile ? "center" : "left"
+    margin: 0,
+    fontWeight: "800",
+    fontSize: "20px",
+    letterSpacing: "-0.03em",
+    color: "#fff"
   },
   navMenu: {
     display: "flex",
     flexDirection: isMobile ? "row" : "column",
-    gap: "10px",
+    gap: "8px",
     justifyContent: isMobile ? "center" : "flex-start",
     flexWrap: "wrap"
   },
@@ -315,110 +426,155 @@ const getStyles = (isMobile) => ({
     display: "block",
     color: "white",
     textDecoration: "none",
-    padding: "10px 15px",
-    borderRadius: "8px",
-    background: "rgba(255, 255, 255, 0.1)",
-    fontWeight: "500",
-    transition: "0.3s",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    fontWeight: "600",
+    fontSize: isMobile ? "13px" : "15px",
+    transition: "all 0.2s ease",
     flex: isMobile ? "1" : "none",
-    textAlign: "center",
-    fontSize: isMobile ? "14px" : "16px",
-    minWidth: isMobile ? "80px" : "auto"
+    textAlign: isMobile ? "center" : "left",
+    minWidth: isMobile ? "85px" : "auto"
   },
   main: {
     flex: 1,
-    padding: isMobile ? "20px 15px" : "40px",
-    background: "#f4f6f9",
+    padding: isMobile ? "16px" : "40px",
+    background: "#f8fafc",
     overflowX: "hidden",
     boxSizing: "border-box",
     width: "100%"
   },
   toggleMenuBtn: {
-    background: "#fff",
-    color: "#4f46e5",
-    border: "1px solid #4f46e5",
-    padding: "10px 15px",
-    borderRadius: "8px",
+    background: "#ffffff",
+    color: "#334155",
+    border: "1px solid #e2e8f0",
+    padding: "10px 16px",
+    borderRadius: "10px",
     cursor: "pointer",
-    fontWeight: "bold",
-    fontSize: "14px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-    transition: "0.2s"
+    fontWeight: "600",
+    fontSize: "13px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px"
   },
   welcomeBox: {
-    background: "#fff",
-    padding: "25px",
-    borderRadius: "12px",
-    marginBottom: "25px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.03)"
+    background: "#ffffff",
+    padding: isMobile ? "20px" : "28px",
+    borderRadius: "16px",
+    marginBottom: "28px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+    border: "1px solid #e2e8f0"
   },
   cards: {
     display: "flex",
-    gap: "15px",
-    marginBottom: "30px",
+    gap: "16px",
+    marginBottom: "32px",
     flexWrap: "wrap"
   },
   card: {
     flex: isMobile ? "1 1 45%" : "1",
-    minWidth: "140px",
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
-    textAlign: "center"
+    minWidth: "160px",
+    background: "#ffffff",
+    padding: "24px",
+    borderRadius: "16px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+    border: "1px solid #e2e8f0",
+    transition: "transform 0.2s ease",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between"
   },
   cardTitle: {
     margin: 0,
     color: "#64748b",
-    fontSize: "14px",
-    fontWeight: "500"
+    fontSize: "13px",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em"
   },
   cardNumber: {
-    fontSize: isMobile ? "24px" : "32px",
-    fontWeight: "bold",
+    fontSize: isMobile ? "28px" : "36px",
+    fontWeight: "800",
     marginTop: "8px",
     marginBottom: 0,
-    color: "#4f46e5"
+    color: "#4f46e5",
+    letterSpacing: "-0.04em"
   },
   recentBox: {
-    background: "#fff",
-    padding: isMobile ? "15px" : "25px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
+    background: "#ffffff",
+    padding: isMobile ? "20px" : "28px",
+    borderRadius: "16px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
     width: "100%",
+    border: "1px solid #e2e8f0",
+    boxSizing: "border-box"
+  },
+  formSection: {
+    background: "#ffffff",
+    padding: isMobile ? "20px" : "28px",
+    borderRadius: "16px",
+    marginBottom: "28px",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+    border: "1px solid #e2e8f0",
     boxSizing: "border-box"
   },
   form: {
-    background: "#fff",
-    padding: isMobile ? "15px" : "25px",
-    borderRadius: "12px",
-    marginBottom: "25px",
     display: "flex",
     flexDirection: isMobile ? "column" : "row",
-    gap: "15px",
+    gap: "12px",
     flexWrap: "wrap",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.03)",
     boxSizing: "border-box"
   },
   input: {
-    padding: "12px",
-    borderRadius: "8px",
+    padding: "12px 16px",
+    borderRadius: "10px",
     border: "1px solid #e2e8f0",
+    background: "#f8fafc",
     flex: "1",
     width: "100%",
-    minWidth: isMobile ? "100%" : "160px",
+    minWidth: isMobile ? "100%" : "175px",
     outline: "none",
-    boxSizing: "border-box"
+    boxSizing: "border-box",
+    fontSize: "14px",
+    color: "#0f172a",
+    transition: "border 0.2s ease"
   },
   btn: {
     background: "#4f46e5",
-    color: "#fff",
+    color: "#ffffff",
     border: "none",
     padding: "12px 24px",
-    borderRadius: "8px",
+    borderRadius: "10px",
     cursor: "pointer",
-    fontWeight: "bold",
-    width: isMobile ? "100%" : "auto"
+    fontWeight: "600",
+    width: isMobile ? "100%" : "auto",
+    fontSize: "14px",
+    boxShadow: "0 1px 2px rgba(79, 70, 229, 0.15)",
+    transition: "all 0.2s ease"
+  },
+  cancelBtn: {
+    background: "#ffffff",
+    color: "#475569",
+    border: "1px solid #e2e8f0",
+    padding: "12px 20px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "14px",
+    transition: "all 0.2s ease"
+  },
+  btnLink: {
+    display: "inline-block",
+    background: "#4f46e5",
+    color: "#ffffff",
+    textDecoration: "none",
+    padding: "10px 18px",
+    borderRadius: "10px",
+    fontWeight: "600",
+    fontSize: "14px",
+    textAlign: "center",
+    transition: "all 0.2s ease"
   },
   tableWrapper: {
     width: "100%",
@@ -426,51 +582,75 @@ const getStyles = (isMobile) => ({
   },
   table: {
     width: "100%",
-    borderCollapse: "collapse",
+    borderCollapse: "separate",
+    borderSpacing: 0,
     textAlign: "left",
-    minWidth: "500px" 
+    minWidth: "500px"
   },
   tableHeader: {
-    background: "#4f46e5",
-    color: "#fff"
+    background: "#f8fafc",
+    color: "#475569"
   },
   th: {
-    padding: "15px",
-    fontWeight: "500",
-    fontSize: "14px"
+    padding: "16px 20px",
+    fontWeight: "600",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    borderBottom: "1px solid #e2e8f0"
   },
   tr: {
-    borderBottom: "1px solid #f1f5f9"
+    transition: "background 0.15s ease"
   },
   td: {
-    padding: "15px",
+    padding: "16px 20px",
     color: "#334155",
-    fontSize: "14px"
+    fontSize: "14px",
+    borderBottom: "1px solid #f1f5f9"
   },
   badge: {
-    background: "#f1f5f9",
-    padding: "5px 10px",
-    borderRadius: "20px",
+    background: "#eef2ff",
+    color: "#4338ca",
+    padding: "4px 10px",
+    borderRadius: "6px",
     fontSize: "12px",
-    border: "1px solid #e2e8f0"
+    fontWeight: "600",
+    letterSpacing: "0.01em",
+    display: "inline-block"
   },
   edit: {
-    background: "#22c55e",
-    color: "#fff",
-    padding: "6px 12px",
-    border: "none",
-    borderRadius: "6px",
+    background: "#f0fdf4",
+    color: "#166534",
+    padding: "6px 14px",
+    border: "1px solid #bbf7d0",
+    borderRadius: "8px",
     cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "13px",
+    transition: "all 0.2s ease",
     flex: 1
   },
   delete: {
-    background: "#ef4444",
-    color: "#fff",
-    padding: "6px 12px",
-    border: "none",
-    borderRadius: "6px",
+    background: "#fef2f2",
+    color: "#991b1b",
+    padding: "6px 14px",
+    border: "1px solid #fecaca",
+    borderRadius: "8px",
     cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "13px",
+    transition: "all 0.2s ease",
     flex: 1
+  },
+  errorBox: {
+    color: "#991b1b",
+    background: "#fef2f2",
+    border: "1px solid #fecaca",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    fontSize: "14px",
+    fontWeight: "500",
+    marginBottom: "20px"
   }
 });
 
