@@ -16,6 +16,10 @@ function App() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // ✅ CARD SCANNER HOOK STATES
+  const [uploading, setUploading] = useState(false);
+  const [scanError, setScanError] = useState("");
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -47,6 +51,34 @@ function App() {
     if (API) refreshData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API]);
+
+  // HANDLE FILE UPLOAD SCAN
+  const handleCardUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setScanError("");
+    setError("");
+
+    const dataPayload = new FormData();
+    dataPayload.append("cardImage", file);
+
+    axios
+      .post(`${API}/api/students/scan`, dataPayload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((res) => {
+        setUploading(false);
+        refreshData();
+        alert(`Successfully scanned and verified UMT Student: ${res.data.name}`);
+      })
+      .catch((err) => {
+        setUploading(false);
+        const serverMessage = err.response?.data?.message || "Card verification processing failed.";
+        setScanError(serverMessage);
+      });
+  };
 
   // HANDLE INPUT
   const handleChange = (e) => {
@@ -109,7 +141,6 @@ function App() {
       course: s.course
     });
     setEditId(s._id);
-    // Smooth scroll to the top of the form for better mobile experience
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -147,6 +178,58 @@ function App() {
           <Link to="/students" style={styles.btnLink}>Manage Data</Link>
         </div>
       </div>
+
+      {/* 🛡️ AI CARD SCANNING COMPONENT ENTRY */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={styles.scannerContainer}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+          <span style={{ fontSize: "22px" }}>🛡️</span>
+          <h3 style={{ margin: 0, color: "#0f172a", fontSize: "16px", fontWeight: "700" }}>
+            AI Student Card Verification Gateway
+          </h3>
+        </div>
+        <p style={{ color: "#64748b", fontSize: "13.5px", margin: "0 0 16px 0", lineHeight: "1.5" }}>
+          Scan a student ID card image. The OCR system runs visual text stream extractions, maps student profiles dynamically, and strictly rejects any non-UMT card layouts.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleCardUpload} 
+              id="card-scanner-upload" 
+              style={{ display: "none" }}
+              disabled={uploading}
+            />
+            <label 
+              htmlFor="card-scanner-upload" 
+              style={{
+                ...styles.btn,
+                background: uploading ? "#94a3b8" : "#4f46e5",
+                cursor: uploading ? "not-allowed" : "pointer",
+                margin: 0,
+                textAlign: "center"
+              }}
+            >
+              {uploading ? "Extracting & Verifying Text..." : "📸 Upload Card Front Image"}
+            </label>
+          </div>
+
+          {scanError && (
+            <motion.div 
+              initial={{ opacity: 0, x: -5 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              style={styles.scannerError}
+            >
+              ⚠️ {scanError}
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
 
       <div style={styles.cards}>
         <div style={styles.card}>
@@ -270,7 +353,6 @@ function App() {
 
       {/* TABLE DATA LIST CARD */}
       <div style={styles.recentBox}>
-        {/* Real-time search filter bar */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px", background: "#f8fafc", padding: "10px 15px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
           <span style={{ color: "#94a3b8" }}>🔍</span>
           <input
@@ -363,8 +445,7 @@ function App() {
 
       {/* MAIN LAYOUT SECTION */}
       <div style={styles.main}>
-        {/* SLICK HEADER ACTION */}
-        <div style={{ display: "flex", justifyContent: isMobile ? "flex-start" : "flex-start", marginBottom: "24px" }}>
+        <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "24px" }}>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={styles.toggleMenuBtn}>
             {sidebarOpen ? "✕ Minimize" : "☰ Sidebar Menu"}
           </button>
@@ -380,7 +461,7 @@ function App() {
   );
 }
 
-/* ✅ ENHANCED VISUAL SYSTEM */
+/* ✅ ENHANCED VISUAL SYSTEM WITH NEW SCANNER CLASSES */
 const getStyles = (isMobile) => ({
   appContainer: {
     display: "flex",
@@ -465,6 +546,23 @@ const getStyles = (isMobile) => ({
     marginBottom: "28px",
     boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
     border: "1px solid #e2e8f0"
+  },
+  scannerContainer: {
+    background: "#ffffff",
+    padding: "24px",
+    borderRadius: "16px",
+    marginBottom: "28px",
+    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)",
+    border: "1px solid #e2e8f0"
+  },
+  scannerError: {
+    padding: "12px 16px",
+    background: "#fef2f2",
+    color: "#991b1b",
+    border: "1px solid #fee2e2",
+    borderRadius: "10px",
+    fontSize: "13.5px",
+    fontWeight: "500"
   },
   cards: {
     display: "flex",
