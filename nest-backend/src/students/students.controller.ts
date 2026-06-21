@@ -1,9 +1,17 @@
-import { Controller, Get, Post, Body, Put, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 
-@Controller('api/students') // This makes your URL: http://localhost:3001/api/students
+@Controller('api/students')
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
+
+  // New Scan Endpoint: POST http://localhost:3001/api/students/scan
+  @Post('scan')
+  @UseInterceptors(FileInterceptor('cardImage'))
+  async scanCard(@UploadedFile() file: any) {
+    return this.studentsService.scanAndVerifyCard(file.buffer);
+  }
 
   @Post()
   create(@Body() createStudentDto: any) {
@@ -13,20 +21,5 @@ export class StudentsController {
   @Get()
   findAll() {
     return this.studentsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.studentsService.findOne(id);
-  }
-
-  @Put(':id')
-  update(@Param('id') id: string, @Body() updateStudentDto: any) {
-    return this.studentsService.update(id, updateStudentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.studentsService.remove(id);
   }
 }
